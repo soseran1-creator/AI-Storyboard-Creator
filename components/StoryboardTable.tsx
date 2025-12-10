@@ -4,7 +4,7 @@ import ImageCell from './ImageCell';
 import { Film, FileVideo, Mic, Type as TextIcon, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import '../assets/fonts/NotoSansKR-Regular-normal.js'; // You would typically need to load fonts for PDF separately in a real app, keeping this simpler for now.
+// import '../assets/fonts/NotoSansKR-Regular-normal.js'; // Commented out to prevent build errors on some platforms
 
 interface StoryboardTableProps {
   data: StoryboardResponse;
