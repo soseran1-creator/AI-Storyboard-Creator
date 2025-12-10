@@ -27,13 +27,15 @@ const App: React.FC = () => {
     const checkApiKey = async () => {
       try {
         // Check if running in AI Studio environment with helper
-        if (window.aistudio && window.aistudio.hasSelectedApiKey) {
+        if (typeof window !== 'undefined' && window.aistudio && window.aistudio.hasSelectedApiKey) {
           const hasKey = await window.aistudio.hasSelectedApiKey();
           setHasApiKey(hasKey);
         } else {
           // Fallback: If not in AI Studio, check if API_KEY is already injected in env
-          // This prevents auto-skipping the gate if the key is missing on Vercel
-          if (process.env.API_KEY) {
+          // Safely access process.env to avoid reference errors
+          const envApiKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : null;
+          
+          if (envApiKey) {
             setHasApiKey(true);
           } else {
             setHasApiKey(false);
@@ -51,11 +53,10 @@ const App: React.FC = () => {
 
   const handleConnectApiKey = async () => {
     // Check if the AI Studio helper exists
-    if (window.aistudio && window.aistudio.openSelectKey) {
+    if (typeof window !== 'undefined' && window.aistudio && window.aistudio.openSelectKey) {
       try {
         await window.aistudio.openSelectKey();
         // Assume key selection was successful if openSelectKey resolves
-        // In a real scenario, we might want to re-verify or force a reload
         setHasApiKey(true);
       } catch (error) {
         console.error("Failed to select API key", error);
@@ -63,7 +64,7 @@ const App: React.FC = () => {
       }
     } else {
       // Fallback for environments where window.aistudio is missing (e.g. Vercel)
-      alert("AI Studio environment not detected. The external key picker is only available in Google AI Studio/IDX. If you are on Vercel, please set the API_KEY environment variable.");
+      alert("AI Studio environment not detected. The external key picker is only available in Google AI Studio/IDX. If you are on Vercel, please set the API_KEY environment variable in your project settings.");
     }
   };
 
@@ -141,7 +142,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="bg-indigo-600 p-2 rounded-lg text-white">
@@ -158,7 +159,7 @@ const App: React.FC = () => {
             {/* Allow re-selecting key if needed */}
             <button 
               onClick={handleConnectApiKey} 
-              className="text-xs text-slate-400 hover:text-indigo-600 flex items-center gap-1 transition-colors"
+              className="text-xs text-slate-400 hover:text-indigo-600 flex items-center gap-1 transition-colors cursor-pointer p-2 rounded hover:bg-slate-50"
               title="Change API Key"
             >
               <KeyRound className="w-3 h-3" /> 설정
