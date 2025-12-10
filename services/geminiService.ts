@@ -1,9 +1,6 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { StoryboardResponse, StoryboardBrief } from "../types";
 
-const apiKey = process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
-
 // Schema definition for structured output
 const storyboardSchema: Schema = {
   type: Type.OBJECT,
@@ -52,6 +49,9 @@ const storyboardSchema: Schema = {
 
 export const generateStoryboardText = async (brief: StoryboardBrief): Promise<StoryboardResponse> => {
   try {
+    // Initialize inside the function to pick up the latest process.env.API_KEY
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     const prompt = `
       Create a professional educational video storyboard based on the following Creative Brief:
 
@@ -118,6 +118,9 @@ export const generateStoryboardText = async (brief: StoryboardBrief): Promise<St
 
 export const generateStoryboardImage = async (prompt: string): Promise<string | null> => {
   try {
+    // Initialize inside the function to pick up the latest process.env.API_KEY
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
     // We append style modifiers to ensure it looks like a storyboard
     const finalPrompt = `${prompt}, minimalistic storyboard sketch style, pencil drawing, rough concept art, wide shot aspect ratio, black and white or muted colors, simple lines, clean composition`;
 

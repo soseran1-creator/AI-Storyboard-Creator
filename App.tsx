@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { generateStoryboardText } from './services/geminiService';
 import { StoryboardResponse, LoadingState, StoryboardBrief } from './types';
 import StoryboardTable from './components/StoryboardTable';
-import { Clapperboard, Sparkles, AlertCircle, FileText, Users, Lightbulb, GitMerge, Clock, ShieldAlert, Image as ImageIcon } from 'lucide-react';
+import { Clapperboard, Sparkles, AlertCircle, FileText, Users, Lightbulb, GitMerge, Clock, ShieldAlert, Image as ImageIcon, KeyRound, ExternalLink } from 'lucide-react';
 
 const App: React.FC = () => {
+  const [hasApiKey, setHasApiKey] = useState<boolean>(false);
+  const [checkingKey, setCheckingKey] = useState<boolean>(true);
+
   const [brief, setBrief] = useState<StoryboardBrief>({
     topic: '',
     purpose: '',
@@ -19,6 +22,35 @@ const App: React.FC = () => {
   const [storyboardData, setStoryboardData] = useState<StoryboardResponse | null>(null);
   const [loadingState, setLoadingState] = useState<LoadingState>(LoadingState.IDLE);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkApiKey = async () => {
+      if (window.aistudio && window.aistudio.hasSelectedApiKey) {
+        const hasKey = await window.aistudio.hasSelectedApiKey();
+        setHasApiKey(hasKey);
+      } else {
+        // Fallback for environments without the wrapper (e.g. local dev if env var is set)
+        setHasApiKey(true);
+      }
+      setCheckingKey(false);
+    };
+    checkApiKey();
+  }, []);
+
+  const handleConnectApiKey = async () => {
+    if (window.aistudio && window.aistudio.openSelectKey) {
+      try {
+        await window.aistudio.openSelectKey();
+        // Assume key selection was successful if openSelectKey resolves
+        setHasApiKey(true);
+        // Reset checking state to force re-evaluation if needed, 
+        // though strictly we just need to update hasApiKey
+      } catch (error) {
+        console.error("Failed to select API key", error);
+        setErrorMsg("API Key selection failed. Please try again.");
+      }
+    }
+  };
 
   const handleInputChange = (field: keyof StoryboardBrief, value: string) => {
     setBrief(prev => ({ ...prev, [field]: value }));
@@ -36,14 +68,60 @@ const App: React.FC = () => {
       const data = await generateStoryboardText(brief);
       setStoryboardData(data);
       setLoadingState(LoadingState.COMPLETE);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setErrorMsg("스토리보드를 생성하는 도중 문제가 발생했습니다. API 키를 확인하거나 잠시 후 다시 시도해주세요.");
+      if (err.message && err.message.includes("Requested entity was not found")) {
+         setErrorMsg("API Key가 유효하지 않습니다. 다시 키를 선택해주세요.");
+         setHasApiKey(false); // Reset key state to force re-selection
+      } else {
+         setErrorMsg("스토리보드를 생성하는 도중 문제가 발생했습니다. API 키를 확인하거나 잠시 후 다시 시도해주세요.");
+      }
       setLoadingState(LoadingState.ERROR);
     }
   };
 
   const isFormValid = brief.topic.trim() !== '' && brief.purpose.trim() !== '';
+
+  if (checkingKey) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  // API Key Selection Gate
+  if (!hasApiKey) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden text-center p-8 space-y-6 animate-fadeIn">
+          <div className="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto text-indigo-600">
+            <KeyRound className="w-8 h-8" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">API Key 연결 필요</h1>
+            <p className="text-slate-600">
+              AI Storyboard Creator를 사용하려면 Google Cloud 프로젝트의 API Key가 필요합니다.
+            </p>
+          </div>
+          
+          <button
+            onClick={handleConnectApiKey}
+            className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-transform transform hover:-translate-y-1 flex items-center justify-center gap-2"
+          >
+            <KeyRound className="w-5 h-5" />
+            API Key 연결하기
+          </button>
+          
+          <div className="text-xs text-slate-400 pt-4 border-t border-slate-100">
+             <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1 hover:text-indigo-500 transition-colors">
+               <ExternalLink className="w-3 h-3" /> API 비용 및 결제 관련 문서 보기
+             </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
@@ -58,8 +136,18 @@ const App: React.FC = () => {
               AI Storyboard Creator
             </h1>
           </div>
-          <div className="text-sm text-slate-500 hidden sm:block">
-            Powered by Google Gemini 2.5
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-slate-500 hidden sm:block">
+              Powered by Google Gemini 2.5
+            </div>
+            {/* Allow re-selecting key if needed */}
+            <button 
+              onClick={handleConnectApiKey} 
+              className="text-xs text-slate-400 hover:text-indigo-600 flex items-center gap-1 transition-colors"
+              title="Change API Key"
+            >
+              <KeyRound className="w-3 h-3" /> 설정
+            </button>
           </div>
         </div>
       </header>

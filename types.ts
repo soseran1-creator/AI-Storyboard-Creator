@@ -31,3 +31,15 @@ export enum LoadingState {
   COMPLETE = 'COMPLETE',
   ERROR = 'ERROR'
 }
+
+// Augment the window object to support AI Studio's key management
+declare global {
+  interface AIStudio {
+    hasSelectedApiKey: () => Promise<boolean>;
+    openSelectKey: () => Promise<void>;
+  }
+
+  interface Window {
+    aistudio?: AIStudio;
+  }
+}
