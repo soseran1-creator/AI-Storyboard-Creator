@@ -25,30 +25,45 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const checkApiKey = async () => {
-      if (window.aistudio && window.aistudio.hasSelectedApiKey) {
-        const hasKey = await window.aistudio.hasSelectedApiKey();
-        setHasApiKey(hasKey);
-      } else {
-        // Fallback for environments without the wrapper (e.g. local dev if env var is set)
-        setHasApiKey(true);
+      try {
+        // Check if running in AI Studio environment with helper
+        if (window.aistudio && window.aistudio.hasSelectedApiKey) {
+          const hasKey = await window.aistudio.hasSelectedApiKey();
+          setHasApiKey(hasKey);
+        } else {
+          // Fallback: If not in AI Studio, check if API_KEY is already injected in env
+          // This prevents auto-skipping the gate if the key is missing on Vercel
+          if (process.env.API_KEY) {
+            setHasApiKey(true);
+          } else {
+            setHasApiKey(false);
+          }
+        }
+      } catch (err) {
+        console.error("Error checking API key:", err);
+        setHasApiKey(false);
+      } finally {
+        setCheckingKey(false);
       }
-      setCheckingKey(false);
     };
     checkApiKey();
   }, []);
 
   const handleConnectApiKey = async () => {
+    // Check if the AI Studio helper exists
     if (window.aistudio && window.aistudio.openSelectKey) {
       try {
         await window.aistudio.openSelectKey();
         // Assume key selection was successful if openSelectKey resolves
+        // In a real scenario, we might want to re-verify or force a reload
         setHasApiKey(true);
-        // Reset checking state to force re-evaluation if needed, 
-        // though strictly we just need to update hasApiKey
       } catch (error) {
         console.error("Failed to select API key", error);
         setErrorMsg("API Key selection failed. Please try again.");
       }
+    } else {
+      // Fallback for environments where window.aistudio is missing (e.g. Vercel)
+      alert("AI Studio environment not detected. The external key picker is only available in Google AI Studio/IDX. If you are on Vercel, please set the API_KEY environment variable.");
     }
   };
 
