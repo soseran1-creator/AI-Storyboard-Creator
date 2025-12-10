@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { generateStoryboardText } from './services/geminiService';
 import { StoryboardResponse, LoadingState, StoryboardBrief } from './types';
 import StoryboardTable from './components/StoryboardTable';
-import { Clapperboard, Sparkles, AlertCircle, FileText, Users, Lightbulb, GitMerge, Clock, ShieldAlert, Image as ImageIcon, KeyRound, ExternalLink } from 'lucide-react';
+import { Clapperboard, Sparkles, AlertCircle, FileText, Users, Lightbulb, GitMerge, Clock, ShieldAlert, Image as ImageIcon, KeyRound, ExternalLink, ArrowRight, Settings } from 'lucide-react';
 
 const App: React.FC = () => {
   const [hasApiKey, setHasApiKey] = useState<boolean>(false);
   const [checkingKey, setCheckingKey] = useState<boolean>(true);
+  const [manualApiKey, setManualApiKey] = useState<string>('');
+  const [isAIStudio, setIsAIStudio] = useState<boolean>(false);
 
   const [brief, setBrief] = useState<StoryboardBrief>({
     topic: '',
@@ -26,16 +28,20 @@ const App: React.FC = () => {
   useEffect(() => {
     const checkApiKey = async () => {
       try {
-        // Check if running in AI Studio environment with helper
+        // 1. Check if we are in Google AI Studio / IDX environment
         if (typeof window !== 'undefined' && window.aistudio && window.aistudio.hasSelectedApiKey) {
+          setIsAIStudio(true);
           const hasKey = await window.aistudio.hasSelectedApiKey();
           setHasApiKey(hasKey);
         } else {
-          // Fallback: If not in AI Studio, check if API_KEY is already injected in env
-          // Safely access process.env to avoid reference errors
+          setIsAIStudio(false);
+          // 2. Fallback: Check process.env (Vercel Env Vars)
           const envApiKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : null;
           
-          if (envApiKey) {
+          // 3. Fallback: Check localStorage (Manual User Input)
+          const localApiKey = typeof window !== 'undefined' ? localStorage.getItem("gemini_api_key") : null;
+
+          if (envApiKey || localApiKey) {
             setHasApiKey(true);
           } else {
             setHasApiKey(false);
@@ -52,20 +58,34 @@ const App: React.FC = () => {
   }, []);
 
   const handleConnectApiKey = async () => {
-    // Check if the AI Studio helper exists
-    if (typeof window !== 'undefined' && window.aistudio && window.aistudio.openSelectKey) {
+    if (isAIStudio && window.aistudio) {
       try {
         await window.aistudio.openSelectKey();
-        // Assume key selection was successful if openSelectKey resolves
         setHasApiKey(true);
       } catch (error) {
         console.error("Failed to select API key", error);
         setErrorMsg("API Key selection failed. Please try again.");
       }
-    } else {
-      // Fallback for environments where window.aistudio is missing (e.g. Vercel)
-      alert("AI Studio environment not detected. The external key picker is only available in Google AI Studio/IDX. If you are on Vercel, please set the API_KEY environment variable in your project settings.");
     }
+  };
+
+  const handleManualKeySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (manualApiKey.trim().length > 10) {
+      localStorage.setItem("gemini_api_key", manualApiKey.trim());
+      setHasApiKey(true);
+      setErrorMsg(null);
+    } else {
+      setErrorMsg("유효한 API Key를 입력해주세요.");
+    }
+  };
+
+  const handleResetKey = () => {
+    // Log out / Reset Key
+    localStorage.removeItem("gemini_api_key");
+    setHasApiKey(false);
+    setStoryboardData(null);
+    setManualApiKey('');
   };
 
   const handleInputChange = (field: keyof StoryboardBrief, value: string) => {
@@ -86,9 +106,10 @@ const App: React.FC = () => {
       setLoadingState(LoadingState.COMPLETE);
     } catch (err: any) {
       console.error(err);
-      if (err.message && err.message.includes("Requested entity was not found")) {
-         setErrorMsg("API Key가 유효하지 않습니다. 다시 키를 선택해주세요.");
-         setHasApiKey(false); // Reset key state to force re-selection
+      if (err.message && (err.message.includes("Requested entity was not found") || err.message.includes("API Key"))) {
+         setErrorMsg("API Key가 유효하지 않거나 만료되었습니다. 다시 설정해주세요.");
+         // Optional: Automatically prompt for key again if invalid
+         // setHasApiKey(false); 
       } else {
          setErrorMsg("스토리보드를 생성하는 도중 문제가 발생했습니다. API 키를 확인하거나 잠시 후 다시 시도해주세요.");
       }
@@ -115,24 +136,53 @@ const App: React.FC = () => {
             <KeyRound className="w-8 h-8" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">API Key 연결 필요</h1>
-            <p className="text-slate-600">
-              AI Storyboard Creator를 사용하려면 Google Cloud 프로젝트의 API Key가 필요합니다.
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">API Key 설정</h1>
+            <p className="text-slate-600 mb-4">
+              AI Storyboard Creator를 사용하려면 Gemini API Key가 필요합니다.
             </p>
           </div>
           
-          <button
-            onClick={handleConnectApiKey}
-            className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-transform transform hover:-translate-y-1 flex items-center justify-center gap-2"
-          >
-            <KeyRound className="w-5 h-5" />
-            API Key 연결하기
-          </button>
+          {isAIStudio ? (
+            <button
+              onClick={handleConnectApiKey}
+              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-transform transform hover:-translate-y-1 flex items-center justify-center gap-2"
+            >
+              <KeyRound className="w-5 h-5" />
+              API Key 연결하기 (AI Studio)
+            </button>
+          ) : (
+            <form onSubmit={handleManualKeySubmit} className="space-y-4">
+              <div className="text-left">
+                <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase">Gemini API Key 입력</label>
+                <input 
+                  type="password"
+                  value={manualApiKey}
+                  onChange={(e) => setManualApiKey(e.target.value)}
+                  placeholder="AIza..."
+                  className="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-transform transform hover:-translate-y-1 flex items-center justify-center gap-2"
+              >
+                <ArrowRight className="w-5 h-5" />
+                시작하기
+              </button>
+            </form>
+          )}
+
+          {errorMsg && (
+             <p className="text-red-500 text-sm mt-2">{errorMsg}</p>
+          )}
           
           <div className="text-xs text-slate-400 pt-4 border-t border-slate-100">
-             <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1 hover:text-indigo-500 transition-colors">
-               <ExternalLink className="w-3 h-3" /> API 비용 및 결제 관련 문서 보기
+             <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1 hover:text-indigo-500 transition-colors">
+               <ExternalLink className="w-3 h-3" /> API Key 발급받기 (Google AI Studio)
              </a>
+             <p className="mt-2 text-[10px] text-slate-400">
+               * 입력된 키는 브라우저에만 저장되며 서버로 전송되지 않습니다.
+             </p>
           </div>
         </div>
       </div>
@@ -148,21 +198,25 @@ const App: React.FC = () => {
             <div className="bg-indigo-600 p-2 rounded-lg text-white">
               <Clapperboard className="w-6 h-6" />
             </div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent hidden sm:block">
               AI Storyboard Creator
+            </h1>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent sm:hidden">
+              AI Storyboard
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-sm text-slate-500 hidden sm:block">
+            <div className="text-sm text-slate-500 hidden md:block">
               Powered by Google Gemini 2.5
             </div>
-            {/* Allow re-selecting key if needed */}
+            {/* Settings / Reset Key Button */}
             <button 
-              onClick={handleConnectApiKey} 
-              className="text-xs text-slate-400 hover:text-indigo-600 flex items-center gap-1 transition-colors cursor-pointer p-2 rounded hover:bg-slate-50"
+              onClick={handleResetKey} 
+              className="text-xs text-slate-500 hover:text-red-600 hover:bg-red-50 flex items-center gap-1 transition-colors cursor-pointer px-3 py-2 rounded-lg border border-transparent hover:border-red-100"
               title="Change API Key"
             >
-              <KeyRound className="w-3 h-3" /> 설정
+              <Settings className="w-4 h-4" /> 
+              <span className="hidden sm:inline">설정 (키 변경)</span>
             </button>
           </div>
         </div>

@@ -1,6 +1,19 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { StoryboardResponse, StoryboardBrief } from "../types";
 
+// Helper to get API Key from environment or local storage (for manual input)
+const getApiKey = (): string | undefined => {
+  // 1. Check process.env (for Vercel env vars or standard builds)
+  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+    return process.env.API_KEY;
+  }
+  // 2. Check localStorage (for manual user input on Vercel/Client-side)
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem("gemini_api_key") || undefined;
+  }
+  return undefined;
+};
+
 // Schema definition for structured output
 const storyboardSchema: Schema = {
   type: Type.OBJECT,
@@ -49,8 +62,12 @@ const storyboardSchema: Schema = {
 
 export const generateStoryboardText = async (brief: StoryboardBrief): Promise<StoryboardResponse> => {
   try {
-    // Initialize inside the function to pick up the latest process.env.API_KEY
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      throw new Error("API Key not found. Please set it in settings.");
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
     
     const prompt = `
       Create a professional educational video storyboard based on the following Creative Brief:
@@ -118,8 +135,12 @@ export const generateStoryboardText = async (brief: StoryboardBrief): Promise<St
 
 export const generateStoryboardImage = async (prompt: string): Promise<string | null> => {
   try {
-    // Initialize inside the function to pick up the latest process.env.API_KEY
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      throw new Error("API Key not found.");
+    }
+    
+    const ai = new GoogleGenAI({ apiKey });
 
     // We append style modifiers to ensure it looks like a storyboard
     const finalPrompt = `${prompt}, minimalistic storyboard sketch style, pencil drawing, rough concept art, wide shot aspect ratio, black and white or muted colors, simple lines, clean composition`;
