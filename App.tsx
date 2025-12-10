@@ -232,10 +232,10 @@ const App: React.FC = () => {
           <section className="animate-fadeIn max-w-4xl mx-auto">
             <div className="mb-8 text-center space-y-4">
               <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-                영상 제작을 위한 <span className="text-indigo-600">완벽한 콘티</span> 설계
+                사내 <span className="text-indigo-600"> AI 콘티</span> 자동 생성 프로그램
               </h2>
               <p className="text-lg text-slate-600">
-                콘텐츠 브리프를 작성하면 AI가 교육적 규칙과 서사를 반영한 정교한 스토리보드를 생성합니다.
+                콘텐츠 개요를 작성하면 AI가 교육적 규칙과 서사를 반영한 정교한 스토리보드(콘티)를 생성합니다.
               </p>
             </div>
 
@@ -253,7 +253,7 @@ const App: React.FC = () => {
                     type="text"
                     value={brief.topic}
                     onChange={(e) => handleInputChange('topic', e.target.value)}
-                    placeholder="예: 서울의 숨겨진 역사 유적 탐방 브이로그"
+                    placeholder="예: 우리나라의 다양한 지형 이해하기"
                     className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                   />
                 </div>
@@ -296,7 +296,7 @@ const App: React.FC = () => {
                       type="text"
                       value={brief.keyConcepts}
                       onChange={(e) => handleInputChange('keyConcepts', e.target.value)}
-                      placeholder="각 컷이 전달해야 할 핵심 메시지"
+                      placeholder="전달해야 하는 핵심 개념 및 내용을 모두 작성합니다."
                       className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
                     />
                   </div>
@@ -310,7 +310,7 @@ const App: React.FC = () => {
                       type="text"
                       value={brief.narrativeFlow}
                       onChange={(e) => handleInputChange('narrativeFlow', e.target.value)}
-                      placeholder="예: 도입 -> 문제제시 -> 개념설명 -> 예시 -> 정리"
+                      placeholder="예: 도입,예시,정리 or 발단,전개,위기,절정,결말 등의 형식."
                       className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
                     />
                   </div>
@@ -355,7 +355,7 @@ const App: React.FC = () => {
                     <textarea
                       value={brief.conceptSettings}
                       onChange={(e) => handleInputChange('conceptSettings', e.target.value)}
-                      placeholder="첨부할 컨셉보드(PDF)의 내용을 텍스트로 요약해 주세요. (예: 주인공 '미나'는 노란색 후드티를 입은 10살 소녀, 호기심 많은 성격)"
+                      placeholder="컨셉보드의 내용을 텍스트로 작성해주세요. (예: 한 줄 컨셉, 장르 및 포맷, 핵심 메시지, 캐릭터, 톤 앤 매너)"
                       className="w-full p-3 h-32 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none text-sm"
                     />
                   </div>
