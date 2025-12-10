@@ -35,13 +35,13 @@ const App: React.FC = () => {
           setHasApiKey(hasKey);
         } else {
           setIsAIStudio(false);
-          // 2. Fallback: Check process.env (Vercel Env Vars)
-          const envApiKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : null;
-          
-          // 3. Fallback: Check localStorage (Manual User Input)
+          // 2. Check localStorage (Manual User Input) - Priority 1
           const localApiKey = typeof window !== 'undefined' ? localStorage.getItem("gemini_api_key") : null;
+          
+          // 3. Check process.env (Vercel Env Vars) - Priority 2
+          const envApiKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : null;
 
-          if (envApiKey || localApiKey) {
+          if (localApiKey || envApiKey) {
             setHasApiKey(true);
           } else {
             setHasApiKey(false);
@@ -81,11 +81,13 @@ const App: React.FC = () => {
   };
 
   const handleResetKey = () => {
-    // Log out / Reset Key
-    localStorage.removeItem("gemini_api_key");
-    setHasApiKey(false);
-    setStoryboardData(null);
-    setManualApiKey('');
+    if (window.confirm("API Key 설정을 초기화하고 다시 입력하시겠습니까?")) {
+      // Log out / Reset Key
+      localStorage.removeItem("gemini_api_key");
+      setHasApiKey(false);
+      setStoryboardData(null);
+      setManualApiKey('');
+    }
   };
 
   const handleInputChange = (field: keyof StoryboardBrief, value: string) => {
@@ -107,9 +109,8 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       if (err.message && (err.message.includes("Requested entity was not found") || err.message.includes("API Key"))) {
-         setErrorMsg("API Key가 유효하지 않거나 만료되었습니다. 다시 설정해주세요.");
-         // Optional: Automatically prompt for key again if invalid
-         // setHasApiKey(false); 
+         setErrorMsg("API Key가 유효하지 않거나 만료되었습니다. 상단의 설정 버튼을 눌러 다시 설정해주세요.");
+         // We do not auto-logout here to allow user to read error, but they can click settings
       } else {
          setErrorMsg("스토리보드를 생성하는 도중 문제가 발생했습니다. API 키를 확인하거나 잠시 후 다시 시도해주세요.");
       }
@@ -181,7 +182,7 @@ const App: React.FC = () => {
                <ExternalLink className="w-3 h-3" /> API Key 발급받기 (Google AI Studio)
              </a>
              <p className="mt-2 text-[10px] text-slate-400">
-               * 입력된 키는 브라우저에만 저장되며 서버로 전송되지 않습니다.
+               * 입력된 키는 브라우저의 로컬 스토리지에만 저장됩니다.
              </p>
           </div>
         </div>
@@ -211,8 +212,9 @@ const App: React.FC = () => {
             </div>
             {/* Settings / Reset Key Button */}
             <button 
+              type="button"
               onClick={handleResetKey} 
-              className="text-xs text-slate-500 hover:text-red-600 hover:bg-red-50 flex items-center gap-1 transition-colors cursor-pointer px-3 py-2 rounded-lg border border-transparent hover:border-red-100"
+              className="relative z-10 text-xs text-slate-500 hover:text-red-600 hover:bg-red-50 flex items-center gap-1 transition-colors cursor-pointer px-3 py-2 rounded-lg border border-transparent hover:border-red-100"
               title="Change API Key"
             >
               <Settings className="w-4 h-4" /> 
@@ -223,9 +225,9 @@ const App: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-0">
         
-        {/* Input Section - Hidden when data exists to focus on result, but accessible if needed (could implement a 'back' or 'edit' button later) */}
+        {/* Input Section */}
         {!storyboardData ? (
           <section className="animate-fadeIn max-w-4xl mx-auto">
             <div className="mb-8 text-center space-y-4">

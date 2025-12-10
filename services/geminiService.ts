@@ -1,16 +1,19 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { StoryboardResponse, StoryboardBrief } from "../types";
 
-// Helper to get API Key from environment or local storage (for manual input)
+// Helper to get API Key with priority: LocalStorage (User Manual) > Process Env (Deployment)
 const getApiKey = (): string | undefined => {
-  // 1. Check process.env (for Vercel env vars or standard builds)
+  // 1. Check localStorage first (User override or Manual Input on Vercel)
+  if (typeof window !== 'undefined') {
+    const localKey = localStorage.getItem("gemini_api_key");
+    if (localKey) return localKey;
+  }
+  
+  // 2. Check process.env (Vercel Env Vars or Build-time injection)
   if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
     return process.env.API_KEY;
   }
-  // 2. Check localStorage (for manual user input on Vercel/Client-side)
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem("gemini_api_key") || undefined;
-  }
+  
   return undefined;
 };
 
