@@ -21,7 +21,12 @@ export interface StoryboardBrief {
   narrativeFlow: string; // e.g., Intro -> Problem -> Concept -> Example -> Outro
   cutCount: string; // Estimated duration/cut count
   constraints: string; // Restrictions (e.g., no violence, keep character consistent)
-  conceptSettings: string; // Character/Concept board details
+  conceptSettings: string; // Character/Concept board details (Text fallback)
+  conceptFile?: {
+    name: string;
+    data: string; // Base64 string without prefix
+    mimeType: string;
+  } | null;
 }
 
 export enum LoadingState {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { generateStoryboardText } from './services/geminiService';
 import { StoryboardResponse, LoadingState, StoryboardBrief } from './types';
 import StoryboardTable from './components/StoryboardTable';
-import { Clapperboard, Sparkles, AlertCircle, FileText, Users, Lightbulb, GitMerge, Clock, ShieldAlert, Image as ImageIcon, KeyRound, ExternalLink, ArrowRight, Settings } from 'lucide-react';
+import { Clapperboard, Sparkles, AlertCircle, FileText, Users, Lightbulb, GitMerge, Clock, ShieldAlert, Image as ImageIcon, KeyRound, ExternalLink, ArrowRight, Settings, Upload, X } from 'lucide-react';
 
 const App: React.FC = () => {
   const [hasApiKey, setHasApiKey] = useState<boolean>(false);
@@ -18,7 +18,8 @@ const App: React.FC = () => {
     narrativeFlow: '',
     cutCount: '10~15컷 내외',
     constraints: '폭력적 표현 금지, 캐릭터 외형 유지',
-    conceptSettings: ''
+    conceptSettings: '',
+    conceptFile: null
   });
   
   const [storyboardData, setStoryboardData] = useState<StoryboardResponse | null>(null);
@@ -94,6 +95,41 @@ const App: React.FC = () => {
     setBrief(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        alert("PDF 파일만 업로드 가능합니다.");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        alert("파일 크기는 10MB 이하여야 합니다.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        // Remove the data URL prefix (e.g., "data:application/pdf;base64,")
+        const base64Data = base64String.split(',')[1];
+        
+        setBrief(prev => ({
+          ...prev,
+          conceptFile: {
+            name: file.name,
+            mimeType: file.type,
+            data: base64Data
+          }
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeFile = () => {
+    setBrief(prev => ({ ...prev, conceptFile: null }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!brief.topic.trim()) return;
@@ -110,7 +146,6 @@ const App: React.FC = () => {
       console.error(err);
       if (err.message && (err.message.includes("Requested entity was not found") || err.message.includes("API Key"))) {
          setErrorMsg("API Key가 유효하지 않거나 만료되었습니다. 상단의 설정 버튼을 눌러 다시 설정해주세요.");
-         // We do not auto-logout here to allow user to read error, but they can click settings
       } else {
          setErrorMsg("스토리보드를 생성하는 도중 문제가 발생했습니다. API 키를 확인하거나 잠시 후 다시 시도해주세요.");
       }
@@ -232,7 +267,7 @@ const App: React.FC = () => {
           <section className="animate-fadeIn max-w-4xl mx-auto">
             <div className="mb-8 text-center space-y-4">
               <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-                사내 <span className="text-indigo-600"> AI 콘티</span> 자동 생성 프로그램
+                visang <span className="text-indigo-600"> AI 콘티</span> 자동 생성 시스템
               </h2>
               <p className="text-lg text-slate-600">
                 콘텐츠 개요를 작성하면 AI가 교육적 규칙과 서사를 반영한 정교한 스토리보드(콘티)를 생성합니다.
@@ -303,8 +338,11 @@ const App: React.FC = () => {
 
                   {/* 5. Narrative Flow */}
                   <div>
-                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
+                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2 flex-wrap">
                       <GitMerge className="w-4 h-4 text-indigo-500" /> 서사 흐름
+                      <span className="text-xs text-red-500 ml-1 font-normal">
+                        *자세하게 적을 수록 결과물의 완성도가 높아집니다.
+                      </span>
                     </label>
                     <input
                       type="text"
@@ -346,20 +384,63 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 8. Concept Board (Text representation of PDF) */}
+                {/* 8. Concept Board (PDF Upload + Text) */}
                 <div>
                   <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
-                    <ImageIcon className="w-4 h-4 text-indigo-500" /> 컨셉보드 / 캐릭터 설정
+                    <ImageIcon className="w-4 h-4 text-indigo-500" /> 컨셉보드 / 캐릭터 설정 (PDF 첨부)
                   </label>
-                  <div className="relative">
+                  
+                  <div className="space-y-3">
+                    {/* File Upload Area */}
+                    {!brief.conceptFile ? (
+                      <div className="relative border-2 border-dashed border-slate-300 rounded-lg p-6 bg-slate-50 hover:bg-slate-100 transition-colors text-center cursor-pointer group">
+                        <input 
+                          type="file" 
+                          accept="application/pdf"
+                          onChange={handleFileChange}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        />
+                        <div className="flex flex-col items-center justify-center space-y-2 pointer-events-none">
+                          <div className="bg-white p-2 rounded-full shadow-sm group-hover:scale-110 transition-transform">
+                            <Upload className="w-6 h-6 text-indigo-500" />
+                          </div>
+                          <p className="text-sm font-medium text-slate-600">
+                            PDF 파일을 드래그하거나 클릭하여 업로드
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            최대 10MB • 캐릭터, 톤앤매너가 포함된 PDF
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-100 rounded-lg animate-fadeIn">
+                         <div className="flex items-center gap-3">
+                           <div className="bg-white p-2 rounded text-indigo-600">
+                             <FileText className="w-5 h-5" />
+                           </div>
+                           <div className="text-left">
+                             <p className="text-sm font-medium text-slate-800">{brief.conceptFile.name}</p>
+                             <p className="text-xs text-indigo-500">PDF 업로드 완료</p>
+                           </div>
+                         </div>
+                         <button 
+                           type="button"
+                           onClick={removeFile}
+                           className="p-1 hover:bg-red-100 rounded-full text-slate-400 hover:text-red-500 transition-colors"
+                         >
+                           <X className="w-5 h-5" />
+                         </button>
+                      </div>
+                    )}
+
                     <textarea
                       value={brief.conceptSettings}
                       onChange={(e) => handleInputChange('conceptSettings', e.target.value)}
-                      placeholder="컨셉보드의 내용을 텍스트로 작성해주세요. (예: 한 줄 컨셉, 장르 및 포맷, 핵심 메시지, 캐릭터, 톤 앤 매너)"
-                      className="w-full p-3 h-32 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none text-sm"
+                      placeholder="PDF가 없는 경우, 여기에 컨셉보드 내용을 상세히 작성해주세요. (PDF 첨부 시, 추가 설명용으로 사용 가능)"
+                      className="w-full p-3 h-24 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none text-sm"
                     />
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">* PDF 파일의 내용을 여기에 상세히 적어주시면 AI가 반영합니다.</p>
+                  <p className="text-xs text-slate-400 mt-1">* PDF 파일을 첨부하면 AI가 내용을 분석하여 스토리보드 생성에 반영합니다.</p>
                 </div>
 
                 {/* Action Button */}

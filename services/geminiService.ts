@@ -72,8 +72,11 @@ export const generateStoryboardText = async (brief: StoryboardBrief): Promise<St
 
     const ai = new GoogleGenAI({ apiKey });
     
-    const prompt = `
-      Create a professional educational video storyboard based on the following Creative Brief:
+    // Construct the text part of the prompt
+    const textPrompt = `
+      Create a professional educational video storyboard based on the following Creative Brief.
+      
+      ${brief.conceptFile ? "**IMPORTANT: A Concept Board PDF has been attached. Analyze the PDF visuals, character designs, and tone, and strictly apply them to the storyboard.**" : ""}
 
       # CREATIVE BRIEF
       - **Topic:** ${brief.topic}
@@ -83,14 +86,14 @@ export const generateStoryboardText = async (brief: StoryboardBrief): Promise<St
       - **Narrative Flow:** ${brief.narrativeFlow}
       - **Cut Count / Duration:** ${brief.cutCount}
       - **Constraints:** ${brief.constraints}
-      - **Concept/Character Settings:** ${brief.conceptSettings}
+      - **Concept/Character Settings (Text Note):** ${brief.conceptSettings || "Refer to the attached file if available."}
 
       # GENERATION RULES (Strict Adherence Required)
 
       1. **Visual Description (Screen Content & Expression):**
          - Describe the scene concretely: Composition, Background, Characters, Facial Expressions, Actions, and Camera Angles (e.g., Close-up, Wide shot).
          - Do NOT use abstract terms. Be visual.
-         - Reflect the provided "Expression Methods" in the brief.
+         - **If a PDF is attached, use the characters and visual style defined in the PDF.**
 
       2. **Subtitles:**
          - Must match the reading level of the "${brief.targetAudience}".
@@ -98,7 +101,6 @@ export const generateStoryboardText = async (brief: StoryboardBrief): Promise<St
 
       3. **Narration:**
          - Include Commentary, Character Dialogue, and Sound Effects (SFX).
-         - Reflect the character tone defined in "Concept/Character Settings".
          - Educational explanations must be accurate and concise.
 
       4. **Flow & Structure:**
@@ -115,13 +117,26 @@ export const generateStoryboardText = async (brief: StoryboardBrief): Promise<St
       Output the result in JSON format matching the schema.
     `;
 
+    // Prepare contents array (Text + Optional File)
+    const contents: any[] = [{ text: textPrompt }];
+
+    // If a file is attached, add it to the contents
+    if (brief.conceptFile) {
+      contents.push({
+        inlineData: {
+          mimeType: brief.conceptFile.mimeType,
+          data: brief.conceptFile.data
+        }
+      });
+    }
+
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: prompt,
+      contents: contents, // Pass the array containing text and file
       config: {
         responseMimeType: "application/json",
         responseSchema: storyboardSchema,
-        systemInstruction: "You are an expert educational video director and storyboard artist. You organize complex ideas into clear, linear visual sequences strictly adhering to creative briefs.",
+        systemInstruction: "You are an expert educational video director and storyboard artist. You organize complex ideas into clear, linear visual sequences strictly adhering to creative briefs and attached concept documents.",
       },
     });
 
