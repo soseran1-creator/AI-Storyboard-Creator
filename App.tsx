@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { generateStoryboardText } from './services/geminiService';
-import { StoryboardResponse, LoadingState, StoryboardBrief } from './types';
+import { StoryboardResponse, LoadingState, StoryboardBrief, StoryboardCut } from './types';
 import StoryboardTable from './components/StoryboardTable';
 import { Clapperboard, Sparkles, AlertCircle, FileText, Users, Lightbulb, GitMerge, Clock, ShieldAlert, Image as ImageIcon, KeyRound, ExternalLink, ArrowRight, Settings, Upload, X } from 'lucide-react';
 
@@ -128,6 +128,22 @@ const App: React.FC = () => {
 
   const removeFile = () => {
     setBrief(prev => ({ ...prev, conceptFile: null }));
+  };
+
+  // New function to handle updates from the table cells
+  const handleUpdateCut = (cutIndex: number, field: keyof StoryboardCut, value: string) => {
+    setStoryboardData(prev => {
+      if (!prev) return null;
+      const newCuts = [...prev.cuts];
+      newCuts[cutIndex] = {
+        ...newCuts[cutIndex],
+        [field]: value
+      };
+      return {
+        ...prev,
+        cuts: newCuts
+      };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -485,7 +501,10 @@ const App: React.FC = () => {
              >
                ← 새로운 브리프 작성하기
              </button>
-             <StoryboardTable data={storyboardData} />
+             <StoryboardTable 
+               data={storyboardData} 
+               onUpdateCut={handleUpdateCut}
+             />
           </div>
         )}
 
